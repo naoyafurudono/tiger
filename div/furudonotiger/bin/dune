@@ -1,4 +1,0 @@
-(executable
- (public_name furudonotiger)
- (name main)
- (libraries furudonotiger))
