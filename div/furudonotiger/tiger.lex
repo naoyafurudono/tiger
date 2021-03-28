@@ -1,5 +1,8 @@
+(* 教科書のparserの記述に基づいて変更 *)
+type svalue = Tokens.svalue
 type pos = int
-type lexresult = Tokens.token
+type ('a, 'b) token = ('a, 'b) Tokens.token
+type lexresult = (svalue, pos) token
 
 val lineNum = ErrorMsg.lineNum
 val linePos = ErrorMsg.linePos
@@ -14,12 +17,15 @@ fun str2int str = case Int.fromString str of
   | NONE   => raise NonNum
 
 %%
+(* パーサの記述に基づいて追加 *)
+%header (functor TigerLexFun (structure Tokens : Tiger_TOKENS));
+
 DIGITS = [0-9]+;
 IDENTIFIER = [a-zA-Z] [\_a-zA-Z0-9]*;
 WHITE = [\ \t]+;
 LCOMMENT = \/\*;
 RCOMMENT = \*\/;
-%s COMMENT;
+%s COMMENT STR;
 
 %%
 {LCOMMENT}            => (commentCounter := !commentCounter + 1; YYBEGIN COMMENT; continue());
@@ -72,6 +78,10 @@ RCOMMENT = \*\/;
 
 <INITIAL>{DIGITS}     => (Tokens.INT(str2int yytext, yypos, yypos + size yytext));
 <INITIAL>{IDENTIFIER} => (Tokens.ID(yytext, yypos, yypos + size yytext));
+
+<INITIAL>\"           => (YYBEGIN STR; continue());
+<STR>\"               => (YYBEGIN INITIAL; continue());
+<STR>[^\"]*           => (Tokens.STRING(yytext, yypos, yypos + size yytext));
 
 .                     => (ErrorMsg.error yypos ("illegal character " ^ yytext); continue());
 

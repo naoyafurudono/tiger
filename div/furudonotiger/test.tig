@@ -6,14 +6,16 @@ let  /* The eight queens solver from Appel */
   var diag1 := intArray [ N + N - 1 ] of 0
   var diag2 := intArray [ N + N - 1] of 0
   function printboard() =
-    (for i := 0 to N - 1
-     do (for j := 0 to N - 1
-         do print(if col[i] = j then " O" else " .");
-            print("\n"));
+    for i := 0 to N - 1
+     do ((for j := 0 to N - 1
+          do (print(if col[i] = j then " O" else " .");
+              print("\n")
+             )
+         );
          print("\n"))
 
-  function try(c:int) =
-    if c = N then printboard() else for r :=0toN-1
+  function try(c : int) =
+    if c = N then printboard() else for r := 0 to N-1
          do if row[r]=0 &
                diag1[r+c]=0 &
                diag2[r+7-c]=0

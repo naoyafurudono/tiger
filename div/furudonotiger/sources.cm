@@ -1,12 +1,9 @@
 Group is
 
 parsetest.sml
-driver.sml
 errormsg.sml
-tokens.sig
-tokens.sml
 tiger.lex
-tiegr.grm
+tiger.grm
 
 $/smlnj-lib.cm
 $/basis.cm

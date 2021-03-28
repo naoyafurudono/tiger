@@ -11,7 +11,13 @@
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
 
-%nonterm  exp | program
+%nonterm  decs | dec | tydec | vardec | fundec 
+  | type_id | ty | ty_fields
+  | lvalue 
+  | id_eq_exps
+  | expseq | expseqq | expseqq_auc
+  | exps
+  | exp | program
 
 %pos int
 %verbose
@@ -30,9 +36,85 @@
 %value INT (1)
 %value STRING ("")
 
+
+%left PLUS MINUS
+%left TIMES DIVIDE
+%left 
 %%
 
 program	: exp				()
 
 	
-exp: 			()
+exp : lvalue ()
+    | ID ()
+    | NIL ()
+    | LPAREN expseqq RPAREN ()
+    | LPAREN RPAREN ()
+    | INT ()
+    | STRING ()
+    | MINUS ()
+    | ID LPAREN exps RPAREN ()
+    | exp PLUS exp ()
+    | exp MINUS  exp ()
+    | exp TIMES exp ()
+    | exp DIVIDE exp ()
+    | exp EQ exp ()
+    | exp NEQ exp ()
+    | exp LT exp ()
+    | exp LE exp ()
+    | exp GT exp ()
+    | exp GE exp ()
+    | exp AND exp ()
+    | exp OR exp ()
+    | type_id LBRACE id_eq_exps RBRACE ()
+    | type_id LBRACK exp RBRACK OF exp  ()
+    | lvalue ASSIGN exp ()
+    | IF exp THEN exp ELSE exp ()
+    | IF exp THEN exp ()
+    | WHILE exp DO exp ()
+    | FOR ID ASSIGN exp TO exp DO exp ()
+    | BREAK ()
+    | LET decs IN expseq END ()
+    | LPAREN exp RPAREN ()
+exps :  exp COMMA exps ()
+     | exp ()
+     | ()
+expseq : exp SEMICOLON expseq ()
+       | exp ()
+       | ()
+expseqq : exp SEMICOLON expseqq_auc ()
+expseqq_auc : exp SEMICOLON expseqq_auc ()
+       | exp ()
+       | ()
+id_eq_exps : ID EQ exp COMMA id_eq_exps ()
+     | ID EQ exp ()
+     | ()
+
+lvalue : ID ()
+       | lvalue DOT ID ()
+       | lvalue LBRACK exp RBRACK ()
+
+decs : dec decs ()
+    |      ()
+dec : tydec  ()
+    | vardec ()
+    | fundec  ()
+
+tydec : TYPE type_id EQ ty ()
+
+ty    : type_id ()
+      | LBRACE ty_fields RBRACE ()
+      | ARRAY OF type_id  ()
+
+type_id : ID ()
+
+ty_fields : ID COLON type_id COMMA ty_fields ()
+          | ID COLON type_id ()
+          | ()
+
+vardec : VAR ID ASSIGN exp ()
+        | VAR ID COLON type_id ASSIGN exp ()
+
+fundec : FUNCTION ID LPAREN ty_fields RPAREN EQ exp ()
+       | FUNCTION ID LPAREN ty_fields RPAREN COLON type_id EQ exp ()
+    

@@ -17,7 +17,3 @@ struct
       end handle LrParser.ParseError => raise ErrorMsg.Error
 
 end
-
-
-cam;
-
