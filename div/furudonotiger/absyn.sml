@@ -1,7 +1,8 @@
 structure Absyn = 
 struct
 
-type pos = int   and   symbol = Symbol.symbol
+type pos = int   
+and  symbol = Symbol.symbol
 
 datatype var = SimpleVar of symbol * pos
             | FieldVar of var * symbol * pos
@@ -22,18 +23,13 @@ and exp = VarExp of var
 	| ForExp of {var: symbol, escape: bool ref,
 		     lo: exp, hi: exp, body: exp, pos: pos}
         | BreakExp of pos
-        | LetExp of {decs: dec list, body: exp, pos: pos}
+        | LetExp of {decs: dec list, body: exp list, pos: pos}  (* modify type of body*)
         | ArrayExp of {typ: symbol, size: exp, init: exp, pos: pos}
 
 and dec = FunctionDec of fundec list
-        | VarDec of {name: symbol,
-		     escape: bool ref,
-		     typ: (symbol * pos) option,
-		     init: exp,
-		     pos: pos}
-        | TypeDec of {name: symbol, ty: ty, pos: pos} list
-
-and ty = NameTy of symbol * pos
+        | VarDec of vardec
+        | TypeDec of tydec list
+ and ty = NameTy of symbol * pos
        | RecordTy of field list
        | ArrayTy of symbol * pos
 
@@ -47,6 +43,11 @@ withtype field = {name: symbol, escape: bool ref,
 		   result: (symbol * pos) option,
 		   body: exp,
 		   pos: pos}
-     
+   and   vardec = {name: symbol,
+		     escape: bool ref,
+		     typ: (symbol * pos) option,
+		     init: exp,
+		     pos: pos}
+    and tydec =  {name: symbol, ty: ty, pos: pos}
 end
         

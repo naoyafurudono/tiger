@@ -1,6 +1,11 @@
 Group is
 
-parsetest.sml
+absyn.sml
+table.sig
+table.sml
+symbol.sml
+parse.sml
+(* parsetest.sml *)
 errormsg.sml
 tiger.lex
 tiger.grm
