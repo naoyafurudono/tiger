@@ -10,14 +10,17 @@
   | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
+  | UMINUS
 
 %nonterm  decs | dec | tydec | vardec | fundec 
-  | type_id | ty | ty_fields
+  | ty | ty_fields
   | lvalue 
   | id_eq_exps
   | expseq | expseqq | expseqq_auc
   | exps
   | exp | program
+  | empty
+  | array_ref
 
 %pos int
 %verbose
@@ -37,16 +40,23 @@
 %value STRING ("")
 
 
+%left OR
+%left AND
+%nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left TIMES DIVIDE
-%left 
+%left UMINUS
+
+(* %nonassoc DO
+%nonassoc RBRACK
+%nonassoc ELSE *)
 %%
 
 program	: exp				()
 
 	
-exp : lvalue ()
-    | ID ()
+exp : 
+    lvalue ()
     | NIL ()
     | LPAREN expseqq RPAREN ()
     | LPAREN RPAREN ()
@@ -56,6 +66,7 @@ exp : lvalue ()
     | ID LPAREN exps RPAREN ()
     | exp PLUS exp ()
     | exp MINUS  exp ()
+    | MINUS exp %prec UMINUS ()
     | exp TIMES exp ()
     | exp DIVIDE exp ()
     | exp EQ exp ()
@@ -66,8 +77,8 @@ exp : lvalue ()
     | exp GE exp ()
     | exp AND exp ()
     | exp OR exp ()
-    | type_id LBRACE id_eq_exps RBRACE ()
-    | type_id LBRACK exp RBRACK OF exp  ()
+    | ID LBRACK exp RBRACK OF exp  ()
+    | ID LBRACE id_eq_exps RBRACE ()
     | lvalue ASSIGN exp ()
     | IF exp THEN exp ELSE exp ()
     | IF exp THEN exp ()
@@ -78,43 +89,41 @@ exp : lvalue ()
     | LPAREN exp RPAREN ()
 exps :  exp COMMA exps ()
      | exp ()
-     | ()
+     | empty ()
 expseq : exp SEMICOLON expseq ()
        | exp ()
        | ()
 expseqq : exp SEMICOLON expseqq_auc ()
 expseqq_auc : exp SEMICOLON expseqq_auc ()
        | exp ()
-       | ()
+       | empty ()
 id_eq_exps : ID EQ exp COMMA id_eq_exps ()
      | ID EQ exp ()
-     | ()
-
+     | empty ()
 lvalue : ID ()
        | lvalue DOT ID ()
        | lvalue LBRACK exp RBRACK ()
 
 decs : dec decs ()
-    |      ()
+    | empty ()
 dec : tydec  ()
     | vardec ()
     | fundec  ()
 
-tydec : TYPE type_id EQ ty ()
+tydec : TYPE ID EQ ty ()
 
-ty    : type_id ()
+ty    : ID ()
       | LBRACE ty_fields RBRACE ()
-      | ARRAY OF type_id  ()
+      | ARRAY OF ID  ()
 
-type_id : ID ()
-
-ty_fields : ID COLON type_id COMMA ty_fields ()
-          | ID COLON type_id ()
-          | ()
+ty_fields : ID COLON ID COMMA ty_fields ()
+          | ID COLON ID ()
+          | empty ()
 
 vardec : VAR ID ASSIGN exp ()
-        | VAR ID COLON type_id ASSIGN exp ()
+        | VAR ID COLON ID ASSIGN exp ()
 
 fundec : FUNCTION ID LPAREN ty_fields RPAREN EQ exp ()
-       | FUNCTION ID LPAREN ty_fields RPAREN COLON type_id EQ exp ()
+       | FUNCTION ID LPAREN ty_fields RPAREN COLON ID EQ exp ()
     
+empty : ()

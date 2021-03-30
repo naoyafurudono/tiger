@@ -31,6 +31,7 @@ RCOMMENT = \*\/;
 {LCOMMENT}            => (commentCounter := !commentCounter + 1; YYBEGIN COMMENT; continue());
 <COMMENT> {RCOMMENT}  => (commentCounter := !commentCounter - 1;if (!commentCounter <= 0) then (YYBEGIN INITIAL; continue()) else continue());
 <COMMENT> .           => (continue());
+
 <INITIAL>while        => (Tokens.WHILE (yypos, yypos + 5));
 <INITIAL>for          => (Tokens.FOR (yypos, yypos + 3));
 <INITIAL>to           => (Tokens.TO (yypos, yypos + 2));
