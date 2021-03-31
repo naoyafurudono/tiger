@@ -1,24 +1,24 @@
 (* 教科書のparserの記述に基づいて変更 *)
 type svalue = Tokens.svalue
-type pos = int
-type ('a, 'b) token = ('a, 'b) Tokens.token
-type lexresult = (svalue, pos) token
+  type pos = int
+  type ('a, 'b) token = ('a, 'b) Tokens.token
+  type lexresult = (svalue, pos) token
 
-val lineNum = ErrorMsg.lineNum
-val linePos = ErrorMsg.linePos
-val commentCounter = ref 0
-fun err(p1,p2) = ErrorMsg.error p1
+  val lineNum = ErrorMsg.lineNum
+  val linePos = ErrorMsg.linePos
+  val commentCounter = ref 0
+  fun err(p1,p2) = ErrorMsg.error p1
 
-fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
+  fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
 
-exception NonNum
-fun str2int str = case Int.fromString str of
-    SOME i => i
+  exception NonNum
+  fun str2int str = case Int.fromString str of
+  SOME i => i
   | NONE   => raise NonNum
 
-%%
-(* パーサの記述に基づいて追加 *)
-%header (functor TigerLexFun (structure Tokens : Tiger_TOKENS));
+  %%
+  (* パーサの記述に基づいて追加 *)
+  %header (functor TigerLexFun (structure Tokens : Tiger_TOKENS));
 
 DIGITS = [0-9]+;
 IDENTIFIER = [a-zA-Z] [\_a-zA-Z0-9]*;
