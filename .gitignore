@@ -1,4 +1,4 @@
 .cm/
 *.lex.sml
 *.grm.*
-./docs/book_Modern\ compiler\ implementation\ in\ ML\ -\ A.W.\ Appel.pdf 
+# ./docs/book_Modern\ compiler\ implementation\ in\ ML\ -\ A.W.\ Appel.pdf 
