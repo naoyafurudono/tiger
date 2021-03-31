@@ -5,20 +5,19 @@ sig
     val name : symbol -> string
     type 'a table
     val empty : 'a table
-    val enter : 'a table * symbol * 'a -> 'a table
-    val look  : 'a table * symbol -> 'a option
+    val enter : 'a table * symbol * 'a -> 'a table (* enter(t, s, a) = tに  s->aを追加したテーブル *)
+    val look  : 'a table * symbol -> 'a option (* look (t, s) = t をsで検索する *)
 end
 
 structure Symbol :> SYMBOL =
 struct
-
 type symbol = string * int
-
+                           (* s = (name, cash) *)
 structure H = HashTable
-
 exception Symbol
 val nextsym = ref 0
 val sizeHint = 128
+(* string -> int のハッシュテーブル*)
 val hashtable : (string,int) H.hash_table =
     let
         fun same (a : string, b : string) : bool = a = b
@@ -37,6 +36,8 @@ fun symbol name =
 
 fun name(s,n) = s
 
+(* Table.table : symbol -> 'a (type/value/...)
+   平衡二分木を実装に使っている *)
 structure Table = IntMapTable(type key = symbol
                               fun getInt(s,n) = n)
 
