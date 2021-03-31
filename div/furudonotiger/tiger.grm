@@ -30,9 +30,6 @@ type pos = int
   | lvalue of A.var
   | lvalue_not_ID of A.var
   | id_eq_exps of (A.symbol * A.exp * A.pos) list
-  | expseq of A.exp list  
-  | expseqq of (A.exp * pos) list 
-  | expseqq_auc of (A.exp * pos) list
   | exps of A.exp list
   | exp of A.exp 
   | program of A.exp
@@ -70,7 +67,7 @@ DO OF NIL
 program	: exp				(exp)
 exp : lvalue                             (A.VarExp lvalue)
     | NIL                                (A.NilExp)
-    | LPAREN expseqq RPAREN              (A.SeqExp expseqq)
+    | exp SEMICOLON exp              (A.SeqExp (exp1, exp2, SEMICOLONleft))
     | LPAREN RPAREN                      (A.NilExp)
     | INT                                (A.IntExp(INT))
     | STRING                             (A.StringExp(STRING, STRINGleft))
@@ -99,18 +96,11 @@ exp : lvalue                             (A.VarExp lvalue)
                      | WHILE exp DO exp                   (A.WhileExp{test = exp1, body = exp2, pos = WHILEleft})
                      | FOR ID ASSIGN exp TO exp DO exp    (A.ForExp{var = symbol ID, escape = ref false, lo = exp1, hi = exp2, body = exp3, pos = FORleft}) (* TODO escape のことを完全に理解する。今は勘でfalseにしている。 *)
                      | BREAK                              (A.BreakExp(BREAKleft))
-                     | LET decs IN expseq END             (A.LetExp{decs = decs, body = expseq, pos = LETleft})
+                     | LET decs IN exp END             (A.LetExp{decs = decs, body = exp, pos = LETleft})
                      | LPAREN exp RPAREN                  (exp)
 exps :  exp COMMA exps                   (exp :: exps)
      | exp                               ([exp])
      | (* empty *)                       ([])
-expseq : exp SEMICOLON expseq            (exp :: expseq)
-       | exp                             ([exp])
-       | (* empty *)                     ([])
-expseqq : exp SEMICOLON expseqq_auc      ((exp, SEMICOLONleft) :: expseqq_auc)
-expseqq_auc : exp SEMICOLON expseqq_auc  ((exp, SEMICOLONleft) :: expseqq_auc)
-            | exp                             ([(exp, expleft)])
-            | (* empty *)                     ([])
 id_eq_exps : ID EQ exp COMMA id_eq_exps  ((symbol ID, exp, COMMAleft) :: id_eq_exps)
            | ID EQ exp                         ([(symbol ID, exp, IDleft)])
            | (* empty *)                       ([]) 
