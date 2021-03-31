@@ -42,7 +42,7 @@ withtype field = {name: symbol, escape: bool ref, typ: symbol, pos: pos}
 		                 pos: pos}
      and   vardec = {name: symbol,
 		                 escape: bool ref,
-		                 typ: (symbol * pos) option,
+		                 typ: (symbol * pos) option,  (* ここはty option ではないか？ *)
 		                 init: exp,
 		                 pos: pos}
      and tydec =  {name: symbol, ty: ty, pos: pos}
