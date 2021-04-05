@@ -3,6 +3,7 @@ sig
     eqtype symbol
     val symbol : string -> symbol
     val name : symbol -> string
+(* for environment *)
     type 'a table
     val empty : 'a table
     val enter : 'a table * symbol * 'a -> 'a table (* enter(t, s, a) = tに  s->aを追加したテーブル *)
