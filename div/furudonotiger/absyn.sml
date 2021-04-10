@@ -4,9 +4,9 @@ struct
 type pos = int
      and  symbol = Symbol.symbol
 
-datatype var = SimpleVar of symbol * pos
-             | FieldVar of var * symbol * pos
-             | SubscriptVar of var * exp * pos
+datatype var = SimpleVar of symbol * pos       (* variable *)
+             | FieldVar of var * symbol * pos  (* record-var.field-sym *)
+             | SubscriptVar of var * exp * pos (* array-var[index-exp] *)
 
      and exp = VarExp of var
              | NilExp

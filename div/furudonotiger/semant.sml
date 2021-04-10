@@ -1,8 +1,12 @@
 signature SEMANT =
 sig
+    (* venv = "今の" 値変数の名前とその型の対応。ASTではなく、識別子に型を対応させるだけ. *)
     type venv = Env.enventry Symbol.table
+    (* tenv = "今の型の識別子にその抽象構文木を対応させる *)
     type tenv = ty Symbol.table
+    (* 出力される中間表現とその型 *)
     type expty
+    (* 変数のASTを変換する *)
     val transVar : venv * tenv * Absyn.var -> expty
     val transExp : venv * tenv * Absyn.exp -> expty
     val transDecs : venv * tenv * Absyn.dec list -> {venv : venv, tenv : tenv}
@@ -14,20 +18,57 @@ structure S = Symbol
 structure T = Types
 structure Semant :> SEMANT =
 struct
+(* *)
 type expty = {exp : Translate.exp, ty : T.ty}
-fun transExp(venv, tenv, exp) : expty =
+
+(* *)
+fun transVar(venv:venv , tenv: tenv , var: A.var) =
     let
-        fun trvar A.SimpleVar(id, pos) = (case S.look (venv, id) of
+        fun trvar A.SimpleVar(id, pos): expty = (case S.look (venv, id) of
                                               SOME(E.VarEntry{ty}) => {exp = (), ty = actual_ty ty}
                                             | NONE => (error pos ("undefined variable " ^ S.name id))
                                          )
-         |  trvar A.FieldVar(v, s, pos) = ...
-         |  trvar A.SubscriptVar(v, e, pos) = ...
-        fun trexp A.VarExp v = trvar v
-          | trexp A.NilExp =
-          | trexp A.IntExp i =
-          | trexp A.StringExp (str, pos) =
-          | trexp A.CallExp {func = f, args = args, pos = pos} =
+         |  trvar A.FieldVar(v, sym, pos) = (* vはレコード型の変数でsym フィールドを持つことを期待。そのときそのフィールドの型がこのfieldVarの型 *)
+           let 
+             val {exp = var_exp, ty = var_ty} = trvar v
+             in (case var_ty of 
+                  T.RECORD(fields, _) =>
+                    let
+                      val typ = (case (find (fn(label, typ)=> label = sym) fields) of
+                                   NONE => error pos ("undefined field " ^ S.name sym)
+                                 | SOME(typ) => typ)
+                      val exp = ()
+                    in
+                      {exp=exp, ty=typ}
+                    end
+                 | _ => error pos "Expect record, but found " show var_ty)
+         |  trvar A.SubscriptVar(v, e, pos) = (* vはArray型の変数であることを期待。*)
+           let
+             val {exp=var_exp, ty=var_ty} = trvar v
+             val typ = (case var_ty of
+                         T.ARRAY(typ, _) => typ
+                         | _ => error pos "Expect Array, but find " ^ show var_ty)
+           in
+             {exp=(), ty=typ}
+           end
+         in trvar v
+    end
+fun transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =
+    let
+        fun trexp A.VarExp v = transVar(venv, tev, v)
+          | trexp A.NilExp = {exp=(), ty = T.NIL}
+          | trexp A.IntExp i = {exp=(), ty = T.NIL}
+          | trexp A.StringExp (str, pos) = {exp = (), ty = T.STRING}
+          | trexp A.CallExp {func = f_sym, args = arg_exps, pos = pos} = 
+              let 
+                val f_ty = (case (look(venv, f_sym)) of
+                             E.FunEntry{formals = param_tys, reset = res_ty} => 
+                               let
+                                 fun check
+                                
+                               in app check {exp=(), res_ty}
+                            | E.VarEntry{ty=ty} => error pos "Expect function type variable, find normal variable of " ^ (show ty)
+
           | trexp A.RecordExp {fields = fields, typ = typ, pos=pos} =
           | trexp A.SeqExp exp_poss =
           | trexp A.AssignExp {var, exp, pos} =
@@ -119,4 +160,4 @@ fun transExp(venv, tenv, exp) : expty =
                               val {tenv = tenv', venv = venv'} = transDec (tenv, venv, dec)
                           in transDecs (tenv', venv', tail) end
                         | [] => {tenv = tenv, venv = venv}
-                   end
+                    end

@@ -12,3 +12,12 @@ datatype ty =
 	     | UNIT
 end
 
+fun show(typ:ty):string = case typ of
+  RECORD _ => "RECORD"
+  | NIL => "NIL"
+  | INT => "INT"
+  | STRING => "STRING"
+  | ARRAY _ => "ARRAY"
+  | NAME _ => "NAME"
+  | UNIT => "UNIT"
+
