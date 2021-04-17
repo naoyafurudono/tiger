@@ -1,14 +1,20 @@
-Group is
-
+Group 
+is
+(* parsetest.sml *)
 absyn.sml
+env.sml
+errormsg.sml
+main.sml
+parse.sml
+semant.sml
+symbol.sml
 table.sig
 table.sml
-symbol.sml
-parse.sml
-(* parsetest.sml *)
-errormsg.sml
-tiger.lex
 tiger.grm
+tiger.lex
+translate.sml
+types.sml
+
 
 $/smlnj-lib.cm
 $/basis.cm

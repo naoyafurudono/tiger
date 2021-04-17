@@ -10,7 +10,6 @@ datatype ty =
          | ARRAY of ty * unique
 	       | NAME of Symbol.symbol * ty option ref
 	     | UNIT
-end
 
 fun show(typ:ty):string = case typ of
   RECORD _ => "RECORD"
@@ -20,4 +19,6 @@ fun show(typ:ty):string = case typ of
   | ARRAY _ => "ARRAY"
   | NAME _ => "NAME"
   | UNIT => "UNIT"
+end
+
 

@@ -21,7 +21,7 @@ datatype var = SimpleVar of symbol * pos       (* variable *)
              | WhileExp of {test: exp, body: exp, pos: pos}
 	     | ForExp of {var: symbol, escape: bool ref, lo: exp, hi: exp, body: exp, pos: pos}
              | BreakExp of pos
-             | LetExp of {decs: dec list, body: exp, pos: pos}  (* changing the type of body; from exp list *)
+             | LetExp of {decs: dec list, body: exp, pos: pos}
              | ArrayExp of {typ: symbol, size: exp, init: exp, pos: pos}  (* 配列宣言 *)
 
      and dec = FunctionDec of fundec list
