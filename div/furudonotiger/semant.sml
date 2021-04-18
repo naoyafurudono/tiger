@@ -65,7 +65,7 @@ fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
             let
                 val {exp = var_exp, ty = var_ty} = trvar v
             in
-                (case var_ty of
+                (case T.actual_ty var_ty of
                      T.RECORD(fields, _) =>
                      let
                          val typ = (case (List.find (fn(label, typ)=> label = sym) fields) of
@@ -81,7 +81,7 @@ fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
          |  trvar (A.SubscriptVar(v, e, pos)) = (* vはArray型の変数、eはintであることを期待。*)
             let
                 val {exp=var_exp, ty=var_ty} = trvar v
-                val typ = (case var_ty of
+                val typ = (case T.actual_ty var_ty of
                                T.ARRAY(typ, _) => typ
                              | _ => error(pos, "Expect Array, but find " ^ T.show var_ty))
                 val {exp=iexp, ty=ity} = transExp (venv, tenv, e)
@@ -128,7 +128,7 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                                          SOME(ty) => ty
                                        | _ => error(pos, "type undefined"))
                 val type_field : (Symbol.symbol * T.ty) list =
-                    (case rec_ty of
+                    (case T.actual_ty rec_ty of
                          T.RECORD(expected_flds, _) => expected_flds
                        | _ => error(pos, "Record type expected!"))
                 fun fieldToTy(s : A.symbol, e : A.exp, pos) : S.symbol * T.ty = (
@@ -282,7 +282,7 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
     end)
 and checkInt({exp = e, ty = ty}, pos) = check(ty, T.INT, pos)
 and check (expected_ty : T.ty, given_ty : T.ty, pos): bool = 
-    if given_ty = expected_ty then true 
+    if T.eqv(given_ty, expected_ty) then true 
     else error(pos, ("Type error\n" ^ "  expect : " ^ (T.show expected_ty) ^ "\n  given : " ^ (T.show given_ty) ^"\n"))
 
 and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : venv} =
@@ -360,14 +360,34 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                    | NONE => (* w/o type annotation *) 
                      {tenv = tenv, venv = Env.enter(venv, name, Env.VarEntry{ty = tInitTy})})
             end
-          | transDec (venv, tenv, A.TypeDec tydecs)  = 
+          | transDec (venv : venv, tenv : tenv, A.TypeDec tydecs)  = 
             let 
-                fun transtydec(venv, tenv, tydecs : Absyn.tydec list) =
-                    (case tydecs of 
-                         {name=id, ty, pos}::tail => transtydec(venv, E.enter (tenv, id, transTy(tenv, ty)), tail)
-                       | [] => {venv = venv, tenv = tenv})
+                fun gather_header(tenv : tenv, tydecs : A.tydec list): tenv = (
+                    case tydecs of
+                        [] => tenv
+                      | {name, ty, pos} :: tail => gather_header(E.enter(tenv, name, T.NAME(name, ref NONE)), tail)
+                )
+                fun update_type_name(tenv : tenv, name : S.symbol, typ : T.ty, pos : A.pos): unit = (
+                    case E.look(tenv, name) of
+                    NONE => raise (Semant "update_type_name")
+                    | SOME(T.NAME(sym, type_ref)) => if not (sym = name) then raise (Semant "update type name")
+                    else type_ref := SOME typ
+                    | _ => raise (Semant "update type name")
+                )
+                fun transtydec(tenv : tenv, tydecs : Absyn.tydec list) : tenv= (
+                    case tydecs of
+                        [] => tenv
+                      | {name, ty, pos} :: tail => (
+                          update_type_name(tenv, name, transTy(tenv, ty), pos);
+                          transtydec(tenv, tail))
+                )
             in 
-                transtydec(venv, tenv, tydecs)
+              let
+                val tmporal_tenv = gather_header(tenv, tydecs)
+                val transed_tenv = transtydec(tmporal_tenv, tydecs)
+              in
+                {venv = venv, tenv = transed_tenv}
+              end
             end
     in
         foldl (fn (decl, {venv, tenv}) => (
@@ -393,7 +413,9 @@ fun transProg e =
     let
         val {exp = e, ty = t} = (
             transExp(Env.base_venv, Env.base_tenv, e)
-            handle TransError msg => (print msg; {exp = (), ty = T.VOID}))
+            handle TransError msg => (print msg; {exp = (), ty = T.VOID})
+            (* | Semant msg => (print msg; {exp = (), ty = T.VOID}) *)
+            )
     in
         ()
     end

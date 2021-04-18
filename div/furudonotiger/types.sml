@@ -21,7 +21,7 @@ fun actual_ty(t : ty) : ty = (
 )
 (* これは SMLの=と等価？ *)
 fun eqv(t1 : ty, t2 : ty) : bool = (
-  case (t1, t2) of
+  case (actual_ty t1, actual_ty t2) of
   (NIL, NIL) => true
   | (INT, INT) => true
   | (STRING, STRING) => true

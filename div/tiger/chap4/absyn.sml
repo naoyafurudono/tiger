@@ -31,7 +31,7 @@ and dec = FunctionDec of fundec list
 		     typ: (symbol * pos) option,
 		     init: exp,
 		     pos: pos}
-        | TypeDec of {name: symbol, ty: ty, pos: pos} list
+        | TypeDec of tydec list
 
 and ty = NameTy of symbol * pos
        | RecordTy of field list
@@ -47,6 +47,7 @@ withtype field = {name: symbol, escape: bool ref,
 		   result: (symbol * pos) option,
 		   body: exp,
 		   pos: pos}
+   and tydec = {name: symbol, ty: ty, pos: pos} list
      
 end
         
