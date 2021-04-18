@@ -21,6 +21,7 @@ val tests =
    ,"mutual.tig"
    ,"single.tig"
    ,"testcases/merge.tig"
+   ,"tmp.tig"
 ]
 val prefix = "tests/"
 fun test()=

@@ -1,0 +1,2 @@
+i := i*10+ord(buffer)-ord("0"); 
+buffer := getchar()
