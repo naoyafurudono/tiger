@@ -241,6 +241,7 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
           (* OpExp *)
           | trexp (A.OpExp{left, oper, right, pos}) =
             let
+                fun checkInt({exp = e, ty = ty}, pos) = check(T.INT, ty, pos)
                 fun checkIntBinOp(left, right, pos) = (
                     checkInt(trexp left, pos);
                     checkInt(trexp right, pos);
@@ -280,7 +281,6 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
     in
         trexp exp
     end)
-and checkInt({exp = e, ty = ty}, pos) = check(ty, T.INT, pos)
 and check (expected_ty : T.ty, given_ty : T.ty, pos): bool = 
     if T.eqv(given_ty, expected_ty) then true 
     else 
