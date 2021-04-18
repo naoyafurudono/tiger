@@ -1,4 +1,4 @@
-let 
+let
 
  type any = {any : int}
  var buffer := getchar()

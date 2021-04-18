@@ -18,6 +18,7 @@ val tests =
    ,"test.tig"
    ,"break.tig"
    ,"break_bad.tig"
+   ,"testcases/merge.tig"
 ]
 val prefix = "tests/"
 fun test()=
