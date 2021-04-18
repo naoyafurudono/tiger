@@ -283,7 +283,13 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
 and checkInt({exp = e, ty = ty}, pos) = check(ty, T.INT, pos)
 and check (expected_ty : T.ty, given_ty : T.ty, pos): bool = 
     if T.eqv(given_ty, expected_ty) then true 
-    else error(pos, ("Type error\n" ^ "  expect : " ^ (T.show expected_ty) ^ "\n  given : " ^ (T.show given_ty) ^"\n"))
+    else 
+        (case T.actual_ty given_ty of
+             T.NIL => (case T.actual_ty expected_ty of
+                           T.RECORD(_) => true
+                         | _ => raise (Semant "NEVER happen"))
+            |_ =>
+             error(pos, ("Type error\n" ^ "  expect : " ^ (T.show expected_ty) ^ "\n  given : " ^ (T.show given_ty) ^"\n")))
 
 and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : venv} =
     let
@@ -369,10 +375,10 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                 )
                 fun update_type_name(tenv : tenv, name : S.symbol, typ : T.ty, pos : A.pos): unit = (
                     case E.look(tenv, name) of
-                    NONE => raise (Semant "update_type_name")
-                    | SOME(T.NAME(sym, type_ref)) => if not (sym = name) then raise (Semant "update type name")
-                    else type_ref := SOME typ
-                    | _ => raise (Semant "update type name")
+                        NONE => raise (Semant "update_type_name")
+                      | SOME(T.NAME(sym, type_ref)) => if not (sym = name) then raise (Semant "update type name")
+                                                       else type_ref := SOME typ
+                      | _ => raise (Semant "update type name")
                 )
                 fun transtydec(tenv : tenv, tydecs : Absyn.tydec list) : tenv= (
                     case tydecs of
@@ -382,12 +388,12 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                           transtydec(tenv, tail))
                 )
             in 
-              let
-                val tmporal_tenv = gather_header(tenv, tydecs)
-                val transed_tenv = transtydec(tmporal_tenv, tydecs)
-              in
-                {venv = venv, tenv = transed_tenv}
-              end
+                let
+                    val tmporal_tenv = gather_header(tenv, tydecs)
+                    val transed_tenv = transtydec(tmporal_tenv, tydecs)
+                in
+                    {venv = venv, tenv = transed_tenv}
+                end
             end
     in
         foldl (fn (decl, {venv, tenv}) => (
@@ -414,8 +420,8 @@ fun transProg e =
         val {exp = e, ty = t} = (
             transExp(Env.base_venv, Env.base_tenv, e)
             handle TransError msg => (print msg; {exp = (), ty = T.VOID})
-            (* | Semant msg => (print msg; {exp = (), ty = T.VOID}) *)
-            )
+        (* | Semant msg => (print msg; {exp = (), ty = T.VOID}) *)
+        )
     in
         ()
     end
