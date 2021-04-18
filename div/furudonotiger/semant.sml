@@ -56,7 +56,7 @@ fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
     let
         fun trvar(A.SimpleVar(id, pos)): expty = 
             (case S.look (venv, id) of
-                 SOME(E.VarEntry{ty=(ty)}) => {exp = (), ty = ty}
+                 SOME(E.VarEntry{ty=(ty)}) => (printD("Find simple variable "^ (T.show ty));{exp = (), ty = ty})
                | _ => (error (pos, ("undefined variable " ^ S.name id))))
          |  trvar (A.FieldVar(v, sym, pos)) = (* レコード変数vのsymフィールドへのアクセス *)
             let
@@ -70,7 +70,7 @@ fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
                                       | SOME(lab, typ) => typ)
                          val exp = ()
                      in
-                         (printD ("Find recprd variable" ^ (T.show var_ty));
+                         (printD ("Find record variable" ^ (T.show var_ty));
                           {exp=exp, ty=typ})
                      end
                    | _ => error (pos, "Expect record, but found " ^ (T.show var_ty)))
@@ -84,6 +84,7 @@ fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
                 val {exp=iexp, ty=ity} = transExp (venv, tenv, e)
             in
                 (check(T.INT, ity, pos);  (* Type of index must be INT *)
+                printD("Find array variable " ^ (T.show typ));
                  {exp=(), ty=typ})
             end
     in 
@@ -102,9 +103,15 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                                        SOME(Env.FunEntry({formals=param_tys, result=result_ty})) => 
                                        let
                                            val arg_tys = map (fn(e) => #ty (trexp e)) arg_exps
+                                           fun check_arg_ty(param_tys, arg_tys) = (ListPair.allEq (fn (x, y) => check(x, y, pos))
+                                                           (param_tys, arg_tys))
+
                                        in 
-                                           (ListPair.allEq (fn (x, y) => check(x, y, pos))
-                                                           (param_tys, arg_tys));
+                                           if List.length param_tys = List.length arg_tys andalso
+                                           check_arg_ty (param_tys, arg_tys)
+                                           then ()
+                                           else error(pos, "Call : arity unmatch")
+                                                           ;
                                            result_ty
                                        end
                                      | SOME(E.VarEntry{ty=ty}) => error(pos, "Expect function type variable, find normal variable of " ^ (T.show ty))
@@ -160,7 +167,7 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                 val {exp= tExpE, ty = tExpTy} = trexp exp
             in
                 check (tVarTy, tExpTy, pos);
-                {exp=(), ty=T.NIL}
+                {exp=(), ty=T.VOID}
             end
           | trexp (A.IfExp {test = test, then'=then', else'=(SOME else'), pos=pos}) =
             let 
@@ -178,8 +185,8 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                 val {exp = tE1Exp, ty = tE1Ty} = trexp then' 
             in
                 check(T.INT, tTestTy, pos);
-                check(tE1Ty, T.NIL, pos);
-                {exp=(), ty=T.NIL}
+                check(tE1Ty, T.VOID, pos);
+                {exp=(), ty=T.VOID}
             end
           | trexp (A.WhileExp {test, body, pos}) =
             let 
@@ -187,8 +194,8 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                 val {exp = tBodyExp, ty = tBodyTy} = trexp body
             in
                 check(T.INT, tTestTy, pos);
-                check(T.NIL, tBodyTy, pos);
-                {exp=(), ty = T.NIL}
+                check(T.VOID, tBodyTy, pos);
+                {exp=(), ty = T.VOID}
             end
           | trexp (A.ForExp {var = varSym, lo=loExp, hi=hiExp, body=bodyExp, pos=pos, ...}) =
             let 
@@ -196,10 +203,10 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                 val {exp = tLoExp, ty = tLoTy} = trexp loExp
             in
                 check(T.INT, tHiTy, pos);
-                check(T.NIL, tLoTy, pos);
-                transExp (E.enter(venv, varSym, Env.VarEntry{ty =T.INT}), tenv, bodyExp)
+                check(T.INT, tLoTy, pos);
+                transExp (E.enter(venv, varSym, Env.VarEntry{ty = T.INT}), tenv, bodyExp)
             end
-          | trexp (A.BreakExp(pos)) = {exp=(), ty=T.NIL} (* TODO : Check the context of break is while or for *)
+          | trexp (A.BreakExp(pos)) = {exp=(), ty=T.VOID} (* TODO : Check the context of break is while or for *)
           | trexp (A.LetExp {decs, body, pos}) =
             let
                 val {venv = venv', tenv = tenv'} = transDecs (venv, tenv, decs)
@@ -266,7 +273,7 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                              val venv' = E.enter (venv, funNameSym, E.FunEntry{formals = map #ty tparams, result=tResTy})
                              fun enterParam ({name =name, ty = ty}, venv): venv = E.enter(venv, name, E.VarEntry{ty=ty})
                              val venv'' = foldl enterParam venv' tparams
-                             val {exp = tBodyExp, ty = tBodyTy} = transExp (venv, tenv, funBodyExp)
+                             val {exp = tBodyExp, ty = tBodyTy} = transExp (venv'', tenv, funBodyExp)
                          in
                              check(tResTy, tBodyTy, pos);
                              transfundec (venv', tenv, tail)
@@ -310,7 +317,7 @@ and transTy (tenv: tenv, A.NameTy (id, pos) : A.ty) : T.ty = (
   | transTy (tenv, A.RecordTy fields) = (
       T.RECORD(map (fn {name = name, typ = typ, pos = pos, ...} =>(name, get_ty(typ, tenv, pos))) fields, ref ())
   )
-  | transTy (tenv, A.ArrayTy (id, pos)) = T.NIL
+  | transTy (tenv, A.ArrayTy (id, pos)) = T.ARRAY(get_ty(id, tenv, pos), ref ())
 and get_ty (typ : A.symbol, tenv : tenv, pos : A.pos) : T.ty = (
     case E.look(tenv, typ) of
     SOME(ty) => ty
@@ -321,7 +328,7 @@ fun transProg e =
     let
         val {exp = e, ty = t} = (
             transExp(Env.base_venv, Env.base_tenv, e)
-            handle TransError msg => (print msg; {exp = (), ty = T.NIL}))
+            handle TransError msg => (print msg; {exp = (), ty = T.VOID}))
     in
         ()
     end
