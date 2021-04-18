@@ -13,15 +13,16 @@ datatype ty =
 	     (* | UNIT *)
 
 fun show(typ:ty):string = case typ of
-  RECORD (flds, _) => "RECORD " ^
+  RECORD (flds, _) => "{" ^
         (foldr (fn ((sym, ty) : Symbol.symbol * ty, acc : string) => 
                  (Symbol.name sym) ^ " : " ^ (show ty) ^ ", " ^ acc)
               "" flds)
-  | NIL => "NIL"
-  | INT => "INT"
-  | STRING => "STRING"
-  | ARRAY _ => "ARRAY"
+              ^ "}"
+  | NIL => "nil"
+  | INT => "int"
+  | STRING => "string"
+  | ARRAY (ty, _) => "[" ^ (show ty) ^ "]"
   | NAME _ => "NAME"
   (* | UNIT => "UNIT" *)
-  | VOID => "VOID"
+  | VOID => "void"
 end
