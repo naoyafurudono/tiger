@@ -15,6 +15,7 @@ tiger.lex
 translate.sml
 types.sml
 
+tests/test.sml
 
 $/smlnj-lib.cm
 $/basis.cm

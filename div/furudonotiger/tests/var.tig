@@ -1,0 +1,7 @@
+let 
+var a : int := 5
+var b : int := a
+var c := b
+in
+a + 1 + b * 12
+end

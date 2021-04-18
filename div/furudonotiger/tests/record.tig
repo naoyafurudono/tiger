@@ -1,0 +1,10 @@
+let
+ type rec = {aa : int}
+ in
+ let 
+  var a  := rec{aa = 12}
+  /* var b := rec{asdas = 1, aa = "aa"} */
+in
+  a.aa
+end
+end

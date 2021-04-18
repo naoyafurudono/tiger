@@ -20,47 +20,58 @@ structure T = Types
 structure S = Symbol
 
 
-structure Semant :> SEMANT =
+structure Semant : SEMANT =
 struct
-(* *)
 type expty = {exp : Translate.exp, ty : T.ty}
 type venv = Env.enventry Symbol.table
 type tenv = Types.ty Symbol.table
 
-(* *)
-
+(* ------------- Error in this module ----------------- *)
 exception TransError of string
+
 fun error (pos : A.pos, message : string) =
-    let 
-        val pretty_msg = 
-            "Position : " ^ (Int.toString pos) ^"\n" ^
-            message
+    let
+        val pretty_msg =
+            "Position : " ^ (Int.toString pos) ^"\n" ^ message
     in
         raise (TransError pretty_msg)
     end
+val debug_flag = true
+val debug_counter = ref 0
+fun printD(msg : string) : unit = (
+    if debug_flag
+    then let
+      val id = Int.toString (!debug_counter)
+      val prefix = "\n---- Debug info " ^ id ^" ----\n"
+      val postfix = "\n-----"^ id ^"------\n"
+    in
+      debug_counter := (!debug_counter) + 1;
+      print(prefix ^ msg ^ postfix)
+    end
+    else ()
+)
 
-
-
+(* ------------- Main Definition ------------- *)
 fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
     let
         fun trvar(A.SimpleVar(id, pos)): expty = 
             (case S.look (venv, id) of
                  SOME(E.VarEntry{ty=(ty)}) => {exp = (), ty = ty}
-               | _ => (error (pos, ("undefined variable " ^ S.name id)))
-            )
-         |  trvar (A.FieldVar(v, sym, pos)) = (* vはレコード型の変数でsym フィールドを持つことを期待。そのときそのフィールドの型がこのfieldVarの型 *)
-            let 
+               | _ => (error (pos, ("undefined variable " ^ S.name id))))
+         |  trvar (A.FieldVar(v, sym, pos)) = (* レコード変数vのsymフィールドへのアクセス *)
+            let
                 val {exp = var_exp, ty = var_ty} = trvar v
-            in 
-                (case var_ty of 
+            in
+                (case var_ty of
                      T.RECORD(fields, _) =>
                      let
                          val typ = (case (List.find (fn(label, typ)=> label = sym) fields) of
-                                        NONE => error(pos, ("undefined field " ^ S.name sym))
+                                        NONE => error(pos, ("record " ^ "undefined field " ^ (S.name sym)))
                                       | SOME(lab, typ) => typ)
                          val exp = ()
                      in
-                         {exp=exp, ty=typ}
+                         (printD ("Find recprd variable" ^ (T.show var_ty));
+                          {exp=exp, ty=typ})
                      end
                    | _ => error (pos, "Expect record, but found " ^ (T.show var_ty)))
             end
@@ -72,7 +83,8 @@ fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
                              | _ => error(pos, "Expect Array, but find " ^ T.show var_ty))
                 val {exp=iexp, ty=ity} = transExp (venv, tenv, e)
             in
-                {exp=(), ty=typ}
+                (check(T.INT, ity, pos);  (* Type of index must be INT *)
+                 {exp=(), ty=typ})
             end
     in 
         trvar var
@@ -84,23 +96,31 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
           | trexp (A.NilExp) = {exp=(), ty = T.NIL}
           | trexp (A.IntExp i) = {exp=(), ty = T.INT}
           | trexp (A.StringExp (str, pos)) = {exp = (), ty = T.STRING}
-          | trexp (A.CallExp {func = f_sym, args = arg_exps, pos = pos}) = 
+          | trexp (A.CallExp {func = f_sym, args = arg_exps, pos = pos}) =
             let 
                 val f_ty : T.ty = (case E.look(venv, f_sym) of
-                                       SOME(Env.FunEntry({formals, result})) => 
+                                       SOME(Env.FunEntry({formals=param_tys, result=result_ty})) => 
                                        let
-                                           fun check{exp = e, ty = t} = ()
+                                           val arg_tys = map (fn(e) => #ty (trexp e)) arg_exps
                                        in 
-                                           check {exp=(), ty = result};
-                                           result
+                                           (ListPair.allEq (fn (x, y) => check(x, y, pos))
+                                                           (param_tys, arg_tys));
+                                           result_ty
                                        end
                                      | SOME(E.VarEntry{ty=ty}) => error(pos, "Expect function type variable, find normal variable of " ^ (T.show ty))
                                      | NONE => error(pos, "unbound function"))
             in 
                 {exp = (), ty = f_ty}
             end
-          | trexp (A.RecordExp {fields = fields, typ = typ, pos=pos}) = 
+          | trexp (A.RecordExp {fields = fields, typ = typ_sym, pos=pos}) = 
             let
+                val rec_ty : T.ty = (case Env.look(tenv, typ_sym) of 
+                                         SOME(ty) => ty
+                                       | _ => error(pos, "type undefined"))
+                val type_field : (Symbol.symbol * T.ty) list =
+                    (case rec_ty of
+                         T.RECORD(expected_flds, _) => expected_flds
+                       | _ => error(pos, "Record type expected!"))
                 fun fieldToTy(s : A.symbol, e : A.exp, pos) : S.symbol * T.ty = (
                     let
                         val {exp = exp, ty=ty} = trexp e
@@ -108,13 +128,27 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                         (s, ty)
                     end
                 )
-                val fieldTypeBindings = map fieldToTy fields
+                val fieldTypeBindings : (A.symbol * T.ty) list = map fieldToTy fields
+                fun remove_field(fld : A.symbol, fld_lst) = (case fld_lst of
+                                          [] => error(pos, "sorry, internal error rmeove (semant.sml // check_record_matching)")
+                                        | (fld', ty)::ys => if fld = fld' then ys else (fld', ty) :: remove_field(fld, ys)
+                                     )
+                fun check_record_matching (expected, actual) = (case (expected, actual) of
+                                                                    ([], []) => true
+                                                                  | ((fld, ty) :: xs, lst) => (
+                                                                      if not (List.exists 
+                                                                               (fn (fld', ty') => fld = fld' andalso (check(ty, ty', pos)))
+                                                                               lst)
+                                                                      then error(pos, "illegal record creation! " ^  (S.name fld))
+                                                                      else check_record_matching(xs, remove_field(fld, lst)))
+                                                                  | _ => (
+                                                                  error(pos, "Record type unmatch!")))
             in
-                (* TODO Type check record!! checkRecord typ fieldTypeBindings; *)
-                {exp=(), ty = T.RECORD(fieldTypeBindings, ref ())}
+                check_record_matching(type_field, fieldTypeBindings);
+                {exp=(), ty = rec_ty}
             end
           | trexp (A.SeqExp (e1, e2, pos)) =
-            let 
+            let
                 val {exp=et1, ty=tty1} = trexp e1
                 val {exp=et2, ty=tty2} = trexp e2
             in
@@ -199,14 +233,14 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                    | A.LeOp =>      ()
                    | A.GtOp =>      ()
                    | A.GeOp =>      ());
-                   (* | _ => error(pos, "Undefined binary operation")); *)
+                (* | _ => error(pos, "Undefined binary operation")); *)
                 checkIntBinOp(left, right, pos)
             end
     in
         trexp exp
     end)
 and checkInt({exp = e, ty = ty}, pos) = check(ty, T.INT, pos)
-and check (given_ty : T.ty, expected_ty : T.ty, pos): bool = 
+and check (expected_ty : T.ty, given_ty : T.ty, pos): bool = 
     if given_ty = expected_ty then true 
     else error(pos, ("Type error\n" ^ "  expect : " ^ (T.show expected_ty) ^ "\n  given : " ^ (T.show given_ty) ^"\n"))
 
@@ -222,7 +256,7 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                                       NONE => error(pos, "function result type undefined")
                                     | SOME(tResTy) => tResTy)
                              val tResTy = (case funResTy of
-                                               NONE => T.NIL
+                                               NONE => T.VOID
                                              | SOME(rt, posRt) => transRt rt)
                              fun transParam{name = nameSym, typ=typSym, pos=pos, escape = esc} : {name : S.symbol, ty : T.ty} = 
                                  (case E.look (tenv, typSym) of 
@@ -250,38 +284,38 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                      (case Env.look(tenv, sym) of
                           SOME(ty) => (
                            check(ty, tInitTy, pos);
-                           {tenv = tenv, venv = E.enter (venv, name, E.VarEntry{ty = tInitTy})}
-                       )
+                           {tenv = tenv, venv = E.enter (venv, name, E.VarEntry{ty = tInitTy})})
                         | NONE => error(pos, "type not recognized"))
-                   | NONE => (
-                       check(tInitTy, T.NIL, pos);
-                       {venv = Env.enter(venv, name, Env.VarEntry{ty = tInitTy}), tenv = tenv}
-                ))
+                   | NONE => (* w/o type annotation *) 
+                       {tenv = tenv, venv = Env.enter(venv, name, Env.VarEntry{ty = tInitTy})})
             end
           | transDec (venv, tenv, A.TypeDec tydecs)  = 
-            let fun transtydec(venv, tenv, tydecs) =
+            let fun transtydec(venv, tenv, tydecs : Absyn.tydec list) =
                     (case tydecs of 
-                         {id, ty, pos}::tail => transtydec(venv, E.enter (tenv, id, transTy(tenv, ty)), tail)
+                         {name=id, ty, pos}::tail => transtydec(venv, E.enter (tenv, id, transTy(tenv, ty)), tail)
                        | [] => {venv = venv, tenv = tenv})
             in 
-                case decs of
-                    dec :: tail => 
-                    let
-                        val {tenv = tenv', venv = venv'} = transDec (venv, tenv, dec)
-                    in 
-                        transDecs (venv', tenv', tail) 
-                    end
-                  | [] => {tenv = tenv, venv = venv}
+              transtydec(venv, tenv, tydecs)
             end
     in
-        foldl (fn (decl, {venv, tenv}) => transDec(venv, tenv, decl)) 
-              {venv = venv, tenv = tenv} 
+        foldl (fn (decl, {venv, tenv}) => (
+            (* printD("\n dec\n"); *)
+            transDec(venv, tenv, decl)))
+              {venv = venv, tenv = tenv}
               decs
     end
 
-and transTy (tenv: tenv, A.NameTy (id, pos) : A.ty) : T.ty = (case E.look (tenv, id) of SOME(ty) => ty | NONE => error(pos, "type not recognized"))
-  | transTy (tenv, A.RecordTy fields) =  T.INT
-  | transTy (tenv, A.ArrayTy (id, pos)) = T.INT
+and transTy (tenv: tenv, A.NameTy (id, pos) : A.ty) : T.ty = (
+    case E.look (tenv, id) of SOME(ty) => ty | NONE => error(pos, "type not recognized"))
+  | transTy (tenv, A.RecordTy fields) = (
+      T.RECORD(map (fn {name = name, typ = typ, pos = pos, ...} =>(name, get_ty(typ, tenv, pos))) fields, ref ())
+  )
+  | transTy (tenv, A.ArrayTy (id, pos)) = T.NIL
+and get_ty (typ : A.symbol, tenv : tenv, pos : A.pos) : T.ty = (
+    case E.look(tenv, typ) of
+    SOME(ty) => ty
+    | NONE => error(pos, "Type name undefined " ^ (S.name typ) ^"\n")
+)
 
 fun transProg e = 
     let

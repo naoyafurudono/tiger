@@ -1,0 +1,6 @@
+let
+  type intArray = array of int
+  var arr := intArray [ 3 ] of 1
+in
+  arr[1] + 0
+end
