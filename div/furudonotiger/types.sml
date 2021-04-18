@@ -11,6 +11,16 @@ datatype ty =
 	       | NAME of Symbol.symbol * ty option ref
          | VOID
 	     (* | UNIT *)
+fun eqv(t1 : ty, t2 : ty) : bool = (
+  case (t1, t2) of
+  (NIL, NIL) => true
+  | (INT, INT) => true
+  | (STRING, STRING) => true
+  | (VOID, VOID) => true
+  | (RECORD(_, id1), RECORD(_, id2)) => id1 = id2
+  | (ARRAY(_, id1), ARRAY(_, id2)) => id1 = id2
+  | _ => false
+)
 
 fun show(typ:ty):string = case typ of
   RECORD (flds, _) => "{" ^
