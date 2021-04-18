@@ -246,13 +246,13 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                     checkInt(trexp right, pos);
                     {exp = (), ty = T.INT})
                 fun checkEq(left, right, pos) = (
-                       let
-                         val {exp = expl, ty = tyl} = trexp left
-                         val {exp = expr, ty = tyr} = trexp right
-                       in
-                       (check(tyl, tyr, pos);
-                        {exp = (), ty = T.INT})
-                       end)
+                    let
+                        val {exp = expl, ty = tyl} = trexp left
+                        val {exp = expr, ty = tyr} = trexp right
+                    in
+                        (check(tyl, tyr, pos);
+                         {exp = (), ty = T.INT})
+                    end)
             in
                 (case oper of
                      A.PlusOp =>
@@ -275,126 +275,127 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                      checkIntBinOp(left, right, pos)
                    | A.GeOp =>
                      checkIntBinOp(left, right, pos))
-                                  (* | _ => error(pos, "Undefined binary operation")); *)
-                 end
-                 in
-                     trexp exp
-                 end)
-                and checkInt({exp = e, ty = ty}, pos) = check(ty, T.INT, pos)
-                and check (expected_ty : T.ty, given_ty : T.ty, pos): bool = 
-                    if given_ty = expected_ty then true 
-                    else error(pos, ("Type error\n" ^ "  expect : " ^ (T.show expected_ty) ^ "\n  given : " ^ (T.show given_ty) ^"\n"))
+                    (* | _ => error(pos, "Undefined binary operation")); *)
+            end
+    in
+        trexp exp
+    end)
+and checkInt({exp = e, ty = ty}, pos) = check(ty, T.INT, pos)
+and check (expected_ty : T.ty, given_ty : T.ty, pos): bool = 
+    if given_ty = expected_ty then true 
+    else error(pos, ("Type error\n" ^ "  expect : " ^ (T.show expected_ty) ^ "\n  given : " ^ (T.show given_ty) ^"\n"))
 
-                and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : venv} =
-                    let
-                        fun transDec (venv, tenv, A.FunctionDec fundecs) : {tenv : tenv, venv : venv} = 
-                            let
-                                fun gather_signature(venv : venv, tenv : tenv, fundecs : A.fundec list) : {venv : venv, tenv : tenv} = (
-                                    case fundecs of 
-                                        ({name=funNameSym, params=funParams, body=funBodyExp, pos=pos, result=funResTy} :: tail) =>
-                                        let
-                                            fun transRt rt : T.ty =
-                                                (case E.look (tenv, rt) of
-                                                     NONE => error(pos, "function result type undefined")
-                                                   | SOME(tResTy) => tResTy)
-                                            val tResTy = (case funResTy of
-                                                              NONE => T.VOID
-                                                            | SOME(rt, posRt) => transRt rt)
-                                            fun transParam{name = nameSym, typ=typSym, pos=pos, escape = esc} : {name : S.symbol, ty : T.ty} = 
-                                                (case E.look (tenv, typSym) of 
-                                                     SOME(ty) => {ty=ty, name = nameSym} 
-                                                   | _      => error(pos, "Parameter type is not defined"))
-                                            val tparams = map transParam funParams
-                                            val venv' = E.enter (venv, funNameSym, E.FunEntry{formals = map #ty tparams, result=tResTy})
-                                        in
-                                            gather_signature(venv', tenv, tail)
-                                        end
-                                      | [] => {venv=venv, tenv=tenv}) 
-                                fun transfundec(venv : venv, tenv : tenv, fundecs : A.fundec) : unit =
-                                    (*
-                                     * venvはこの宣言ブロックのシグネチャを含んでいる
+and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : venv} =
+    let
+        fun transDec (venv, tenv, A.FunctionDec fundecs) : {tenv : tenv, venv : venv} = 
+            let
+                fun gather_signature(venv : venv, tenv : tenv, fundecs : A.fundec list) : {venv : venv, tenv : tenv} = (
+                    case fundecs of 
+                        ({name=funNameSym, params=funParams, body=funBodyExp, pos=pos, result=funResTy} :: tail) =>
+                        let
+                            fun transRt rt : T.ty =
+                                (case E.look (tenv, rt) of
+                                     NONE => error(pos, "function result type undefined")
+                                   | SOME(tResTy) => tResTy)
+                            val tResTy = (case funResTy of
+                                              NONE => T.VOID
+                                            | SOME(rt, posRt) => transRt rt)
+                            fun transParam{name = nameSym, typ=typSym, pos=pos, escape = esc} : {name : S.symbol, ty : T.ty} = 
+                                (case E.look (tenv, typSym) of 
+                                     SOME(ty) => {ty=ty, name = nameSym} 
+                                   | _      => error(pos, "Parameter type is not defined"))
+                            val tparams = map transParam funParams
+                            val venv' = E.enter (venv, funNameSym, E.FunEntry{formals = map #ty tparams, result=tResTy})
+                        in
+                            gather_signature(venv', tenv, tail)
+                        end
+                      | [] => {venv=venv, tenv=tenv}) 
+                fun transfundec(venv : venv, tenv : tenv, fundecs : A.fundec) : unit =
+                    (*
+                     * venvはこの宣言ブロックのシグネチャを含んでいる
                   TODO
                   * パラメータでvenvを拡張
                   * body を型検査
                   *)
-                                    (case fundecs of 
-                                         {name=funNameSym, params=funParams, body=funBodyExp, pos=pos, result=funResTy} =>
-                                         let
-                                             fun transParam{name = nameSym, typ=typSym, pos=pos, escape = esc} : {name : S.symbol, ty : T.ty} = 
-                                                 (case E.look (tenv, typSym) of 
-                                                      SOME(ty) => {ty=ty, name = nameSym} 
-                                                    | _      => error(pos, "Parameter type is not defined"))
-                                             val tparams = map transParam funParams
-                                             fun enterParam ({name =name, ty = ty}, venv): venv = E.enter(venv, name, E.VarEntry{ty=ty})
-                                             fun transRt rt : T.ty =
-                                                 (case E.look (tenv, rt) of
-                                                      NONE => error(pos, "function result type undefined")
-                                                    | SOME(tResTy) => tResTy)
-                                             val tResTy = (case funResTy of
-                                                               NONE => T.VOID
-                                                             | SOME(rt, posRt) => transRt rt)
-                                             val venv' = foldl enterParam venv tparams
-                                             val {exp = tBodyExp, ty = tBodyTy} = transExp (venv', tenv, funBodyExp)
-                                         in
-                                             (check(tResTy, tBodyTy, pos); ())
-                                         end)
-                                (* | _ => raise (Semant "transfundec")) *)
-                                val {venv = venv', tenv = tenv'} = gather_signature(venv, tenv, fundecs)
-                            in 
-                                (
-                                  List.app (fn (fundec) => transfundec(venv', tenv', fundec)) fundecs;
-                                  {venv = venv', tenv = tenv'}
-                                )
-                            end
-                          | transDec (venv, tenv, (A.VarDec {name, escape, init, pos, typ})) =
-                            let
-                                val {exp=tInitExp, ty=tInitTy} = transExp (venv, tenv, init)
-                            in 
-                                (case typ of
-                                     SOME(sym, pos) => 
-                                     (case Env.look(tenv, sym) of
-                                          SOME(ty) => (
-                                           check(ty, tInitTy, pos);
-                                           {tenv = tenv, venv = E.enter (venv, name, E.VarEntry{ty = tInitTy})})
-                                        | NONE => error(pos, "type not recognized"))
-                                   | NONE => (* w/o type annotation *) 
-                                     {tenv = tenv, venv = Env.enter(venv, name, Env.VarEntry{ty = tInitTy})})
-                            end
-                          | transDec (venv, tenv, A.TypeDec tydecs)  = 
-                            let fun transtydec(venv, tenv, tydecs : Absyn.tydec list) =
-                                    (case tydecs of 
-                                         {name=id, ty, pos}::tail => transtydec(venv, E.enter (tenv, id, transTy(tenv, ty)), tail)
-                                       | [] => {venv = venv, tenv = tenv})
-                            in 
-                                transtydec(venv, tenv, tydecs)
-                            end
-                    in
-                        foldl (fn (decl, {venv, tenv}) => (
-                                   (* printD("\n dec\n"); *)
-                                   transDec(venv, tenv, decl)))
-                              {venv = venv, tenv = tenv}
-                              decs
-                    end
-
-                and transTy (tenv: tenv, A.NameTy (id, pos) : A.ty) : T.ty = (
-                    case E.look (tenv, id) of SOME(ty) => ty | NONE => error(pos, "type not recognized"))
-                  | transTy (tenv, A.RecordTy fields) = (
-                      T.RECORD(map (fn {name = name, typ = typ, pos = pos, ...} =>(name, get_ty(typ, tenv, pos))) fields, ref ())
-                  )
-                  | transTy (tenv, A.ArrayTy (id, pos)) = T.ARRAY(get_ty(id, tenv, pos), ref ())
-                and get_ty (typ : A.symbol, tenv : tenv, pos : A.pos) : T.ty = (
-                    case E.look(tenv, typ) of
-                        SOME(ty) => ty
-                      | NONE => error(pos, "Type name undefined " ^ (S.name typ) ^"\n")
+                    (case fundecs of 
+                         {name=funNameSym, params=funParams, body=funBodyExp, pos=pos, result=funResTy} =>
+                         let
+                             fun transParam{name = nameSym, typ=typSym, pos=pos, escape = esc} : {name : S.symbol, ty : T.ty} = 
+                                 (case E.look (tenv, typSym) of 
+                                      SOME(ty) => {ty=ty, name = nameSym} 
+                                    | _      => error(pos, "Parameter type is not defined"))
+                             val tparams = map transParam funParams
+                             fun enterParam ({name =name, ty = ty}, venv): venv = E.enter(venv, name, E.VarEntry{ty=ty})
+                             fun transRt rt : T.ty =
+                                 (case E.look (tenv, rt) of
+                                      NONE => error(pos, "function result type undefined")
+                                    | SOME(tResTy) => tResTy)
+                             val tResTy = (case funResTy of
+                                               NONE => T.VOID
+                                             | SOME(rt, posRt) => transRt rt)
+                             val venv' = foldl enterParam venv tparams
+                             val {exp = tBodyExp, ty = tBodyTy} = transExp (venv', tenv, funBodyExp)
+                         in
+                             (check(tResTy, tBodyTy, pos); ())
+                         end)
+                (* | _ => raise (Semant "transfundec")) *)
+                val {venv = venv', tenv = tenv'} = gather_signature(venv, tenv, fundecs)
+            in 
+                (
+                  List.app (fn (fundec) => transfundec(venv', tenv', fundec)) fundecs;
+                  {venv = venv', tenv = tenv'}
                 )
-
-                fun transProg e = 
-                    let
-                        val {exp = e, ty = t} = (
-                            transExp(Env.base_venv, Env.base_tenv, e)
-                            handle TransError msg => (print msg; {exp = (), ty = T.VOID}))
-                    in
-                        ()
-                    end
-
             end
+          | transDec (venv, tenv, (A.VarDec {name, escape, init, pos, typ})) =
+            let
+                val {exp=tInitExp, ty=tInitTy} = transExp (venv, tenv, init)
+            in 
+                (case typ of
+                     SOME(sym, pos) => 
+                     (case Env.look(tenv, sym) of
+                          SOME(ty) => (
+                           check(ty, tInitTy, pos);
+                           {tenv = tenv, venv = E.enter (venv, name, E.VarEntry{ty = tInitTy})})
+                        | NONE => error(pos, "type not recognized"))
+                   | NONE => (* w/o type annotation *) 
+                     {tenv = tenv, venv = Env.enter(venv, name, Env.VarEntry{ty = tInitTy})})
+            end
+          | transDec (venv, tenv, A.TypeDec tydecs)  = 
+            let 
+                fun transtydec(venv, tenv, tydecs : Absyn.tydec list) =
+                    (case tydecs of 
+                         {name=id, ty, pos}::tail => transtydec(venv, E.enter (tenv, id, transTy(tenv, ty)), tail)
+                       | [] => {venv = venv, tenv = tenv})
+            in 
+                transtydec(venv, tenv, tydecs)
+            end
+    in
+        foldl (fn (decl, {venv, tenv}) => (
+                   (* printD("\n dec\n"); *)
+                   transDec(venv, tenv, decl)))
+              {venv = venv, tenv = tenv}
+              decs
+    end
+
+and transTy (tenv: tenv, A.NameTy (id, pos) : A.ty) : T.ty = (
+    case E.look (tenv, id) of SOME(ty) => ty | NONE => error(pos, "type not recognized"))
+  | transTy (tenv, A.RecordTy fields) = (
+      T.RECORD(map (fn {name = name, typ = typ, pos = pos, ...} =>(name, get_ty(typ, tenv, pos))) fields, ref ())
+  )
+  | transTy (tenv, A.ArrayTy (id, pos)) = T.ARRAY(get_ty(id, tenv, pos), ref ())
+and get_ty (typ : A.symbol, tenv : tenv, pos : A.pos) : T.ty = (
+    case E.look(tenv, typ) of
+        SOME(ty) => ty
+      | NONE => error(pos, "Type name undefined " ^ (S.name typ) ^"\n")
+)
+
+fun transProg e = 
+    let
+        val {exp = e, ty = t} = (
+            transExp(Env.base_venv, Env.base_tenv, e)
+            handle TransError msg => (print msg; {exp = (), ty = T.VOID}))
+    in
+        ()
+    end
+
+end
