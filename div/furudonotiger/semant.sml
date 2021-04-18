@@ -319,10 +319,9 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                 fun transfundec(venv : venv, tenv : tenv, fundecs : A.fundec) : unit =
                     (*
                      * venvはこの宣言ブロックのシグネチャを含んでいる
-                  TODO
-                  * パラメータでvenvを拡張
-                  * body を型検査
-                  *)
+                     * パラメータでvenvを拡張
+                     * body を型検査
+                     *)
                     (case fundecs of 
                          {name=funNameSym, params=funParams, body=funBodyExp, pos=pos, result=funResTy} =>
                          let
@@ -387,7 +386,61 @@ and transDecs (venv:venv, tenv:tenv, decs : A.dec list) : {tenv : tenv, venv : v
                           update_type_name(tenv, name, transTy(tenv, ty), pos);
                           transtydec(tenv, tail))
                 )
+                fun check_loop(tydecs : Absyn.tydec list) : bool = (
+                    let
+                        fun add(s : S.symbol, lst : S.symbol list): S.symbol list = (
+                            case lst of
+                                [] => [s]
+                              | x::xs => (if x = s then xs else x :: add(s, xs))
+                        )
+                        fun remove(s : S.symbol, lst) = (case lst of
+                                                  [] => []
+                                                | x :: xs => if x = s then remove (s, xs) else x :: remove(s, xs)
+                                             )
+                        fun member(s : S.symbol, lst : S.symbol list): bool =
+                            List.exists (fn (x) => x=s) lst
+                        fun subtract(lst1, lst2) = (case lst2 of
+                                                        x::xs => subtract(remove(x, lst1), xs)
+                                                      | [] => lst1
+                                                   )
+                        fun extract_names(candidate : S.symbol list, ty : A.ty) : S.symbol list =(
+                            let (* add(s, lst) = lst にsがなければ加える *)
+                                fun aux(ty : A.ty, acc : S.symbol list) : S.symbol list = (
+                                    case ty of
+                                        A.NameTy(sym, _ ) => 
+                                        if List.exists (fn (cand) => cand = sym) candidate
+                                        then add(sym, acc)
+                                        else acc
+                                      | A.RecordTy(fields) => 
+                                        foldl (fn (field, acc) => if member(#typ field, candidate) then add(#typ field, acc) else acc) acc fields
+                                      | _ => acc
+                                )
+                            in
+                                aux(ty, [])
+                            end)
+                        val candidates : S.symbol list = map #name tydecs
+                        val dependence : (S.symbol * (S.symbol list)) list = 
+                            map (fn {name, ty, pos} => (name, remove(name, extract_names(candidates, ty)))) tydecs
+                        fun rewrite(closed : S.symbol list, dependency : (S.symbol * (S.symbol list)) list) : bool = (
+                            let
+                                val new_closed = map #1 (List.filter (fn (key, deps) => null deps) dependency)
+                            in
+                                if closed = new_closed then  error(0, "type dec loop detect!!") else ();
+                                let 
+                                    val step_depend = (map (fn (key, deps) => (key, subtract(deps, closed))) dependency)
+                                    val step_depend' = List.filter (fn (key, deps) => not (null deps)) step_depend
+                                in
+                                    if null step_depend' then true else rewrite(new_closed, step_depend')
+                                end
+                            end
+
+                        )
+                    in
+                        rewrite([], dependence)
+                    end
+                )
             in 
+                check_loop tydecs;
                 let
                     val tmporal_tenv = gather_header(tenv, tydecs)
                     val transed_tenv = transtydec(tmporal_tenv, tydecs)
