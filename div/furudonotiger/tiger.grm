@@ -53,6 +53,7 @@ DO OF NIL
 %value STRING ("")
 
 %left SEMICOLON
+%nonassoc ASSIGN
 %left OR
 %left AND
 %nonassoc EQ NEQ LT LE GT GE
