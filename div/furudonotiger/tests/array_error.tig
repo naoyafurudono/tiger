@@ -2,5 +2,5 @@ let
   type intArray = array of int
   var arr := intArray [ 3 ] of 1
 in
-  arr["hello"] + 0
+  print(arr[0])
 end
