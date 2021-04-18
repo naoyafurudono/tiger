@@ -36,7 +36,7 @@ fun error (pos : A.pos, message : string) =
     in
         raise (TransError pretty_msg)
     end
-val debug_flag = true
+val debug_flag = false
 val debug_counter = ref 0
 fun printD(msg : string) : unit = (
     if debug_flag

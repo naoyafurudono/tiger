@@ -1,6 +1,8 @@
 structure Test :
           sig
               val test : unit -> unit
+              val test_ast : string list -> Absyn.exp list
+              val tests : string list
           end
 =
 struct
@@ -22,6 +24,13 @@ fun test()=
              print ("------ Test : " ^ t ^ " ------\n");
              Main.main (prefix ^ t);
              print ("\n++++++++++++++++++++++++++++++++\n")
+        ))
+        tests
+fun test_ast(tests : string list)=
+    List.map
+        (fn (t) => (
+             print ("------ Test : " ^ t ^ " ------\n");
+             Main.main (prefix ^ t)
         ))
         tests
 end
