@@ -18,6 +18,8 @@ val tests =
    ,"test.tig"
    ,"break.tig"
    ,"break_bad.tig"
+   ,"mutual.tig"
+   ,"single.tig"
    ,"testcases/merge.tig"
 ]
 val prefix = "tests/"
