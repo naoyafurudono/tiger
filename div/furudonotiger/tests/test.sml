@@ -4,14 +4,16 @@ structure Test :
           end
 =
 struct
-val tests = [
+val tests = 
+[
     "seq.tig"
    ,"var.tig"
    ,"record.tig"
    ,"array.tig"
    ,"array_error.tig"  (* expect int, actual string*)
-        (* ,"test.tig"  *)
-        (* infinite loop now... *)
+   ,"while.tig"
+   ,"for.tig"
+   ,"test.tig"
 ]
 val prefix = "tests/"
 fun test()=
