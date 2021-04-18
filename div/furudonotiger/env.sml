@@ -29,7 +29,7 @@ val base_venv : enventry Symbol.table (* name -> type-of-exp *) =
         val emp = Symbol.empty
         val e1 = Symbol.enter(emp, Symbol.symbol("print"), FunEntry{formals=[Types.STRING], result=Types.VOID}) val e2 = Symbol.enter(e1, Symbol.symbol("flush"), FunEntry{formals=[], result=Types.VOID})
         val e3 = Symbol.enter(e2, Symbol.symbol("getchar"), FunEntry{formals=[], result=Types.STRING})
-        val e4 = Symbol.enter(e3, Symbol.symbol("org"), FunEntry{formals=[Types.STRING], result=Types.INT})
+        val e4 = Symbol.enter(e3, Symbol.symbol("ord"), FunEntry{formals=[Types.STRING], result=Types.INT})
         val e5 = Symbol.enter(e4, Symbol.symbol("chr"), FunEntry{formals=[Types.INT], result=Types.STRING})
         val e6 = Symbol.enter(e5, Symbol.symbol("size"), FunEntry{formals=[Types.STRING], result=Types.INT})
         val e7 = Symbol.enter(e6, Symbol.symbol("substring"), FunEntry{formals=[Types.STRING], result=Types.STRING})

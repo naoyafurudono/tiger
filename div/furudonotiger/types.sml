@@ -11,6 +11,15 @@ datatype ty =
 	       | NAME of Symbol.symbol * ty option ref
          | VOID
 	     (* | UNIT *)
+
+exception ActualType
+fun actual_ty(t : ty) : ty = (
+  case t of
+  NAME(sym, ref(SOME(t))) => t
+  | NAME(_, ref NONE) => raise ActualType
+  | _ => t
+)
+(* これは SMLの=と等価？ *)
 fun eqv(t1 : ty, t2 : ty) : bool = (
   case (t1, t2) of
   (NIL, NIL) => true
