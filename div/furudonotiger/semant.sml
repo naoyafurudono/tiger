@@ -52,6 +52,8 @@ fun printD(msg : string) : unit = (
 )
 
 (* ------------- Main Definition ------------- *)
+(* breakable = Break can be used within while and for *)
+val breakable = ref false
 fun transVar(venv : venv , tenv: tenv , var: A.var): expty =
     let
         fun trvar(A.SimpleVar(id, pos)): expty = 
@@ -189,24 +191,38 @@ and transExp(venv:venv , tenv: tenv , exp: A.exp) : expty =(
                 {exp=(), ty=T.VOID}
             end
           | trexp (A.WhileExp {test, body, pos}) =
-            let 
+            
+            let
+                val restore_breakable = !breakable
                 val {exp = tTestExp, ty = tTestTy} = trexp test
-                val {exp = tBodyExp, ty = tBodyTy} = trexp body
+                val {exp = tBodyExp, ty = tBodyTy} = (breakable := true;trexp body)
             in
+                breakable := restore_breakable;
                 check(T.INT, tTestTy, pos);
                 check(T.VOID, tBodyTy, pos);
                 {exp=(), ty = T.VOID}
             end
           | trexp (A.ForExp {var = varSym, lo=loExp, hi=hiExp, body=bodyExp, pos=pos, ...}) =
             let 
+                val restore_breakable = !breakable
                 val {exp = tHiExp, ty = tHiTy} = trexp hiExp
                 val {exp = tLoExp, ty = tLoTy} = trexp loExp
             in
+                breakable := true;
                 check(T.INT, tHiTy, pos);
                 check(T.INT, tLoTy, pos);
-                transExp (E.enter(venv, varSym, Env.VarEntry{ty = T.INT}), tenv, bodyExp)
+                let 
+                  val res = transExp (E.enter(venv, varSym, Env.VarEntry{ty = T.INT}), tenv, bodyExp)
+                in
+                  breakable := restore_breakable;
+                  res
+                end
             end
-          | trexp (A.BreakExp(pos)) = {exp=(), ty=T.VOID} (* TODO : Check the context of break is while or for *)
+          | trexp (A.BreakExp(pos)) = (
+              if !breakable then 
+              {exp=(), ty=T.VOID} (* TODO : Check the context of break is while or for *)
+              else error(pos, "Bad break use")
+          )
           | trexp (A.LetExp {decs, body, pos}) =
             let
                 val {venv = venv', tenv = tenv'} = transDecs (venv, tenv, decs)
